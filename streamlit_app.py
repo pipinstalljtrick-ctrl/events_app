@@ -37,9 +37,7 @@ st.markdown("""
         --ring2: #fad0c4;
     }
     body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-    .stApp { background: var(--bg) !important; }
     .block-container { padding-top: 0.25rem; }
-    .block-container { padding-bottom: 84px; }
     h1, h2, h3, p { color: var(--text); }
 
     /* Top nav hidden to remove cut-off banner */
@@ -73,25 +71,10 @@ st.markdown("""
     .stTabs { margin-top: 0.25rem; }
     h2, h3 { margin: 0.25rem 0; }
 
-    /* Segmented control styles */
-    .segmented .stRadio [role="radiogroup"] { display:flex; gap:8px; flex-wrap:nowrap; align-items:center; }
-    .segmented .stRadio [role="radio"] { padding:10px 12px; border-radius:999px; border:1px solid #eee; background:#fff; color:#333; }
-    .segmented .stRadio [aria-checked="true"] { background: #ffe6ee; border-color: #ffccd9; color: #d62a62; }
-
-    /* Calendar buttons: scoped compact style */
-    .calendar .stButton>button {
-        height: 36px;
-        padding: 4px 8px;
-        font-size: 14px;
-        border-radius: 10px;
-        background: #ffffff;
-        border: 1px solid #e5e5e5;
-        color: var(--text);
-    }
-    .calendar [data-testid="column"] { padding: 2px; }
-
         /* iPhone/iOS mobile optimizations */
-        @media (max-width: 768px) {
+        @media (max-width: 480px) {
+            /* Stack Streamlit columns */
+            [data-testid="column"] { width: 100% !important; flex: 1 1 100% !important; display: block !important; }
             /* Non-sticky nav on mobile */
             .ig-nav { position: static; padding: 6px 8px; }
             /* Larger touch targets */
@@ -104,10 +87,6 @@ st.markdown("""
             .brand-title .cigarette { width: 52px; height: 20px; }
             /* Tabs scroll horizontally */
             .stTabs [role="tablist"] { overflow-x: auto; white-space: nowrap; }
-            /* Stack ONLY the top-level two-column layout on mobile */
-            .two-col-root + div > [data-testid="column"] { width: 100% !important; flex: 1 1 100% !important; display: block !important; margin-bottom: 8px; }
-            /* Bottom padding retained for general spacing on mobile */
-            .block-container { padding-bottom: 84px; }
         }
 </style>
 """, unsafe_allow_html=True)
@@ -144,9 +123,6 @@ st.markdown("""
     </svg>
 </div>
 """, unsafe_allow_html=True)
-
-# Marker to target the next columns block for mobile stacking
-st.markdown("<div class='two-col-root'></div>", unsafe_allow_html=True)
 
 colA, colB = st.columns([2,1])
 with colA:
@@ -204,7 +180,7 @@ with nav_center:
 
 month_events = [e for e in events if e.date.year == selected_year and e.date.month == selected_month]
 
-# Create interactive calendar
+hide_calendar = st.checkbox("Hide calendar (mobile)", value=True, help="Show only the event list on small screens.")
 
 # Group events by day
 events_by_day = {}
@@ -221,100 +197,86 @@ cal = cal_module.monthcalendar(selected_year, selected_month)
 if 'selected_day' not in st.session_state:
     st.session_state.selected_day = None
 
-left_col, right_col = st.columns([1, 2])
-
-with left_col:
-    st.markdown("<div class='calendar'>", unsafe_allow_html=True)
-    # Weekday labels
-    col_labels = st.columns(7)
-    for i, label in enumerate(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']):
-        with col_labels[i]:
-            st.markdown(f"**{label}**")
-    # Calendar grid
-    for week in cal:
-        cols = st.columns(7)
-        for day_idx, day in enumerate(week):
-            with cols[day_idx]:
-                if day == 0:
-                    st.markdown("")
-                else:
-                    has_events = day in events_by_day
-                    event_count = len(events_by_day.get(day, []))
-                    if has_events:
-                        if st.button(f"{day}", key=f"day_{day}", use_container_width=True, help=f"{event_count} events"):
-                            st.session_state.selected_day = day
+if hide_calendar:
+    # Calendar hidden: show all month events
+    selected_events = month_events
+    st.subheader(f"📅 All Events in {datetime(selected_year, selected_month, 1).strftime('%B %Y')}")
+else:
+    # Two-column layout with calendar
+    left_col, right_col = st.columns([1, 2])
+    with left_col:
+        # Weekday labels
+        col_labels = st.columns(7)
+        for i, label in enumerate(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']):
+            with col_labels[i]:
+                st.markdown(f"**{label}**")
+        # Calendar grid
+        for week in cal:
+            cols = st.columns(7)
+            for day_idx, day in enumerate(week):
+                with cols[day_idx]:
+                    if day == 0:
+                        st.markdown("")
                     else:
-                        st.button(f"{day}", key=f"day_{day}", use_container_width=True, disabled=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+                        has_events = day in events_by_day
+                        event_count = len(events_by_day.get(day, []))
+                        if has_events:
+                            if st.button(f"📌 {day} ({event_count})", key=f"day_{day}", use_container_width=True):
+                                st.session_state.selected_day = day
+                        else:
+                            st.button(f"{day}", key=f"day_{day}", use_container_width=True, disabled=True)
 
-with right_col:
-    # Mobile-friendly view selector (Calendar tab removed)
-    allowed_tabs = ["📰 Feed", "🗺️ Map", "📊 Table"]
-    if 'view_tab' not in st.session_state or st.session_state.view_tab not in allowed_tabs:
-        st.session_state.view_tab = "📰 Feed"
-    # Top segmented control for desktop/tablet
-    st.markdown("<div class='segmented'>", unsafe_allow_html=True)
-    view_choice = st.radio(
-        "View",
-        allowed_tabs,
-        index=allowed_tabs.index(st.session_state.view_tab),
-        horizontal=True,
-        label_visibility="visible",
-        key="top_nav",
-    )
-    st.markdown("</div>", unsafe_allow_html=True)
-    st.session_state.view_tab = view_choice
+    with right_col:
+        # Display events for selected day or all month events
+        if st.session_state.selected_day and st.session_state.selected_day in events_by_day:
+            selected_events = events_by_day[st.session_state.selected_day]
+            day_date = datetime(selected_year, selected_month, st.session_state.selected_day)
+            st.subheader(f"📌 Events on {day_date.strftime('%A, %B %d, %Y')}")
+        else:
+            selected_events = month_events
+            st.subheader(f"📅 All Events in {datetime(selected_year, selected_month, 1).strftime('%B %Y')}")
 
-    # Display events for selected day or all month events
-    if st.session_state.selected_day and st.session_state.selected_day in events_by_day:
-        selected_events = events_by_day[st.session_state.selected_day]
-        day_date = datetime(selected_year, selected_month, st.session_state.selected_day)
-        page_title = f"📌 Events on {day_date.strftime('%A, %B %d, %Y')}"
-    else:
-        selected_events = month_events
-        page_title = f"📅 All Events in {datetime(selected_year, selected_month, 1).strftime('%B %Y')}"
+    # Stories-style quick day selector removed per request
 
     if selected_events:
-        st.subheader(page_title)
         # Sort by price: cheapest first; unknown price last
         def _price_key(e):
             pm = getattr(e, 'price_min', None)
             return pm if pm is not None else float('inf')
         sorted_events = sorted(selected_events, key=_price_key)
-
-        if st.session_state.view_tab == "📰 Feed":
-            for evt in sorted_events:
-                img_html = f"<img class='post-img' src='{evt.image_url}' alt='event image'/>" if getattr(evt, 'image_url', '') else "<div class='post-img'></div>"
-                cur = getattr(evt, 'currency', '')
-                sym = '$' if cur == 'USD' else ''
-                price_label = ''
-                pm = getattr(evt, 'price_min', None)
-                px = getattr(evt, 'price_max', None)
-                if pm is not None and px is not None and px != pm:
-                    price_label = f"{sym}{pm:.0f}-{sym}{px:.0f}"
-                elif pm is not None:
-                    price_label = f"{sym}{pm:.0f}"
-                price_html = f"<span class='pill'>💲 {price_label}</span>" if price_label else ""
-                card_html = textwrap.dedent(f"""
-                <div class="post">
-                {img_html}
-                <div class="post-body">
-                <div class="post-title">{evt.title}</div>
-                <div style="margin-top:6px;">
-                <span class="pill">{evt.date.strftime('%b %d')}</span>
-                <span class="pill">{evt.date.strftime('%I:%M %p')}</span>
-                <span class="pill">{evt.location}</span>
-                {price_html}
-                </div>
-                </div>
-                <div class="post-actions">
-                <a class="link" href="https://www.google.com/search?q={quote_plus(' '.join([evt.title, evt.date.strftime('%b %d, %Y'), evt.location]).strip())}" target="_blank">View details</a>
-                </div>
-                </div>
-                """)
-                st.markdown(card_html, unsafe_allow_html=True)
-
-        elif st.session_state.view_tab == "🗺️ Map":
+        tab1, tab2, tab3 = st.tabs(["📰 Feed", "🗺️ Map", "📊 Table"])
+        with tab1:
+                        for evt in sorted_events:
+                                img_html = f"<img class='post-img' src='{evt.image_url}' alt='event image'/>" if getattr(evt, 'image_url', '') else "<div class='post-img'></div>"
+                                cur = getattr(evt, 'currency', '')
+                                sym = '$' if cur == 'USD' else ''
+                                price_label = ''
+                                pm = getattr(evt, 'price_min', None)
+                                px = getattr(evt, 'price_max', None)
+                                if pm is not None and px is not None and px != pm:
+                                        price_label = f"{sym}{pm:.0f}-{sym}{px:.0f}"
+                                elif pm is not None:
+                                        price_label = f"{sym}{pm:.0f}"
+                                price_html = f"<span class='pill'>💲 {price_label}</span>" if price_label else ""
+                                card_html = textwrap.dedent(f"""
+                                <div class="post">
+                                {img_html}
+                                <div class="post-body">
+                                <div class="post-title">{evt.title}</div>
+                                <div style="margin-top:6px;">
+                                <span class="pill">{evt.date.strftime('%b %d')}</span>
+                                <span class="pill">{evt.date.strftime('%I:%M %p')}</span>
+                                <span class="pill">{evt.location}</span>
+                                {price_html}
+                                </div>
+                                </div>
+                                <div class="post-actions">
+                                <a class="link" href="https://www.google.com/search?q={quote_plus(' '.join([evt.title, evt.date.strftime('%b %d, %Y'), evt.location]).strip())}" target="_blank">View details</a>
+                                </div>
+                                </div>
+                                """)
+                                st.markdown(card_html, unsafe_allow_html=True)
+        with tab2:
             m = folium.Map(location=[42.4825, -70.8800], zoom_start=13, tiles='OpenStreetMap')
             for evt in sorted_events:
                 folium.Marker(
@@ -331,9 +293,8 @@ with right_col:
                     tooltip=evt.title,
                     icon=folium.Icon(color='red', icon='calendar')
                 ).add_to(m)
-            st_folium(m, use_container_width=True, height=420)
-
-        elif st.session_state.view_tab == "📊 Table":
+            st_folium(m, use_container_width=True, height=480)
+        with tab3:
             df_data = []
             for evt in sorted_events:
                 cur = getattr(evt, 'currency', '')
@@ -356,12 +317,8 @@ with right_col:
                 })
             df = pd.DataFrame(df_data)
             st.dataframe(df, use_container_width=True, hide_index=True)
-
-        # Calendar view removed from segmented control; calendar remains on the left.
     else:
         st.info("No events scheduled for this selection.")
-
-# Bottom nav removed per request; single top segmented control remains.
 
 st.divider()
 
