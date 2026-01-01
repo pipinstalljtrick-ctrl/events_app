@@ -208,8 +208,8 @@ selected_choice = st.selectbox(
         "All Month" if d is None else f"{datetime(selected_year, selected_month, d).strftime('%a, %b %d')} ({len(events_by_day[d])})"
     ),
     index=0,
+    key="selected_day",
 )
-st.session_state.selected_day = selected_choice
 
 # Display events for selected day or all month events
 if st.session_state.selected_day and st.session_state.selected_day in events_by_day:
