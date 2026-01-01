@@ -3,6 +3,7 @@ import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Optional, Tuple
+import os
 
 import requests
 from geopy.geocoders import Nominatim
@@ -13,6 +14,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 # Backend default for Ticketmaster API key (used if none is provided)
 DEFAULT_TM_API_KEY = "VHANTNxOcGFfpUD3k3whDbU1TiqBfbGs"
 DEFAULT_EB_TOKEN = "ZUT6K5LOUUFZOFBRYXBY"
+EB_DEBUG: Dict[str, object] = {"status": "", "page_count": 0, "params": {}}
 
 @dataclass
 class Event:
@@ -232,7 +234,7 @@ def fetch_eventbrite_events(zip_code: str, lat: float, lon: float, radius_miles:
     Authentication: Bearer token (private token).
     Pagination: page_count pages; fetch concurrently.
     """
-    token = eb_token or DEFAULT_EB_TOKEN
+    token = eb_token or os.getenv("EVENTBRITE_TOKEN") or DEFAULT_EB_TOKEN
     try:
         url = "https://www.eventbriteapi.com/v3/events/search/"
         out: List[Event] = []
@@ -253,11 +255,13 @@ def fetch_eventbrite_events(zip_code: str, lat: float, lon: float, radius_miles:
         if r0.status_code in (401, 403):
             raise ValueError("Eventbrite API token is invalid or unauthorized.")
         if r0.status_code != 200:
+            EB_DEBUG.update({"status": f"HTTP {r0.status_code}", "page_count": 0, "params": params_base})
             return []
         d0 = r0.json()
         ev0 = d0.get("events", [])
         pag = d0.get("pagination", {})
         page_count = int(pag.get("page_count", 1) or 1)
+        EB_DEBUG.update({"status": "OK", "page_count": page_count, "params": params_base})
 
         def _parse_event(ev: Dict) -> Optional[Event]:
             try:
@@ -328,7 +332,12 @@ def fetch_eventbrite_events(zip_code: str, lat: float, lon: float, radius_miles:
                         continue
         return out
     except Exception:
+        EB_DEBUG.update({"status": "ERROR", "page_count": 0, "params": params_base if 'params_base' in locals() else {}})
         return []
+
+
+def get_eventbrite_debug() -> Dict[str, object]:
+    return EB_DEBUG
 
 
 def aggregate_events(zip_code: str, radius_miles: float, start_date: datetime, end_date: datetime, tm_key: Optional[str]) -> List[Event]:

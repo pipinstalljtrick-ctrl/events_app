@@ -14,7 +14,7 @@ import textwrap
 import calendar as cal_module
 from urllib.parse import quote_plus
 
-from events_service import aggregate_events, Event
+from events_service import aggregate_events, Event, get_eventbrite_debug
 from dotenv import load_dotenv
 import os
 
@@ -184,6 +184,9 @@ with nav_center:
     tm_count = sum(1 for e in events if getattr(e, 'source', '') == 'Ticketmaster')
     eb_count = sum(1 for e in events if getattr(e, 'source', '') == 'Eventbrite')
     st.caption(f"Loaded {len(events)} events • Ticketmaster: {tm_count} • Eventbrite: {eb_count}")
+    eb_debug = get_eventbrite_debug()
+    if eb_debug:
+        st.caption(f"Eventbrite status: {eb_debug.get('status','')} • pages: {eb_debug.get('page_count',0)}")
 
 month_events = [e for e in events if e.date.year == selected_year and e.date.month == selected_month]
 
