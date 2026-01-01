@@ -36,8 +36,9 @@ st.markdown("""
         --ring1: #ff9a9e;
         --ring2: #fad0c4;
     }
+    * { box-sizing: border-box; }
     body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-    .block-container { padding-top: 0.25rem; }
+    .block-container { padding-top: 0.25rem; padding-left: 8px; padding-right: 8px; max-width: 100%; }
     h1, h2, h3, p { color: var(--text); }
 
     /* Top nav hidden to remove cut-off banner */
@@ -48,9 +49,9 @@ st.markdown("""
     .cigarette .body { fill: #e6e6e6; }
     .cigarette .tip { fill: var(--accent); }
     .cigarette .smoke { stroke: var(--muted); stroke-width: 2; fill: none; opacity: 0.6; }
-    .brand-title { display:flex; align-items:center; gap:14px; font-weight:900; font-size:40px; letter-spacing:1.2px; margin: 10px 0 16px; }
+    .brand-title { display:flex; align-items:center; gap:14px; font-weight:900; font-size: clamp(24px, 5vw, 40px); letter-spacing:1.2px; margin: 10px 0 16px; }
     .brand-title .wordmark { background: linear-gradient(90deg, var(--accent), var(--ring1)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-    .brand-title .cigarette { width: 68px; height: 26px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.12)); }
+    .brand-title .cigarette { width: clamp(44px, 7vw, 68px); height: clamp(18px, 3vw, 26px); filter: drop-shadow(0 2px 4px rgba(0,0,0,0.12)); }
 
     /* Stories row */
     .stories { display:flex; gap:12px; overflow-x:auto; padding:8px 4px; }
@@ -59,17 +60,24 @@ st.markdown("""
 
     /* Feed card */
     .post { background: var(--card-bg); border-radius:12px; box-shadow: 0 3px 8px rgba(0,0,0,0.06); overflow:hidden; margin: 12px 0; border: 1px solid #eee; }
-    .post-img { width:100%; height:220px; object-fit:cover; background: linear-gradient(135deg, #e0e0e0, #f0f0f0); }
+    .post-img { width:100%; height: clamp(160px, 35vh, 280px); object-fit:cover; background: linear-gradient(135deg, #e0e0e0, #f0f0f0); }
     .post-body { padding:12px; }
-    .post-title { font-size:16px; font-weight:700; }
-    .pill { display:inline-block; padding:4px 8px; border-radius:999px; background:#f6f6f6; color: var(--muted); font-size:12px; margin-right:6px; }
+    .post-title { font-size: clamp(14px, 2.5vw, 16px); font-weight:700; overflow-wrap:anywhere; }
+    .pill { display:inline-block; padding:4px 8px; border-radius:999px; background:#f6f6f6; color: var(--muted); font-size: clamp(10px, 1.8vw, 12px); margin-right:6px; }
     .post-actions { display:flex; justify-content:flex-end; padding:8px 12px; border-top:1px solid #f0f0f0; }
     .link { color: var(--accent); font-weight:600; text-decoration:none; }
 
     /* Compact controls */
-        .stButton>button { padding: 0.25rem 0.6rem; font-size: 0.9rem; }
+        .stButton>button { padding: 0.5rem 0.8rem; font-size: 1rem; min-height: 44px; }
     .stTabs { margin-top: 0.25rem; }
     h2, h3 { margin: 0.25rem 0; }
+
+    /* Make Streamlit horizontal blocks wrap responsively */
+    [data-testid="stHorizontalBlock"] { display:flex; flex-wrap: wrap !important; gap: 12px; }
+    [data-testid="column"] { width: auto !important; flex: 1 1 320px !important; min-width: 280px; }
+    /* Tabs wrap when cramped */
+    .stTabs [role="tablist"] { display:flex; flex-wrap: wrap; gap:8px; }
+    .stTabs [role="tab"] { flex: 1 1 140px; }
 
         /* iPhone/iOS mobile optimizations */
         @media (max-width: 480px) {
@@ -78,14 +86,13 @@ st.markdown("""
             /* Non-sticky nav on mobile */
             .ig-nav { position: static; padding: 6px 8px; }
             /* Larger touch targets */
-            .stButton>button { padding: 0.6rem 0.9rem; font-size: 1rem; }
+            .stButton>button { padding: 0.7rem 1rem; font-size: 1.05rem; min-height: 48px; }
             /* Card/image sizing */
-            .post-img { height: 160px; }
+            .post-img { height: clamp(140px, 30vh, 220px); }
             .pill { font-size: 11px; padding: 3px 6px; }
             /* Brand sizing on mobile */
-            .brand-title { font-size:28px; letter-spacing:0.8px; gap:10px; }
-            .brand-title .cigarette { width: 52px; height: 20px; }
-            /* Tabs scroll horizontally */
+            .brand-title { letter-spacing:0.8px; gap:10px; }
+            /* Tabs can scroll if needed */
             .stTabs [role="tablist"] { overflow-x: auto; white-space: nowrap; }
         }
 </style>
