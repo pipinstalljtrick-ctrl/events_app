@@ -39,6 +39,7 @@ st.markdown("""
     body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
     .stApp { background: var(--bg) !important; }
     .block-container { padding-top: 0.25rem; }
+    .block-container { padding-bottom: 84px; }
     h1, h2, h3, p { color: var(--text); }
 
     /* Top nav hidden to remove cut-off banner */
@@ -71,6 +72,11 @@ st.markdown("""
         .stButton>button { padding: 0.25rem 0.6rem; font-size: 0.9rem; }
     .stTabs { margin-top: 0.25rem; }
     h2, h3 { margin: 0.25rem 0; }
+
+    /* Segmented control (radio) styling for mobile */
+    .segmented .stRadio [role="radiogroup"] { display:flex; gap:8px; flex-wrap:nowrap; }
+    .segmented .stRadio [role="radio"] { padding:10px 12px; border-radius:999px; border:1px solid #eee; background:#fff; color:#333; }
+    .segmented .stRadio [aria-checked="true"] { background: #ffe6ee; border-color: #ffccd9; color: #d62a62; }
 
     /* Calendar buttons: scoped compact style */
     .calendar .stButton>button {
@@ -240,56 +246,69 @@ with left_col:
     st.markdown("</div>", unsafe_allow_html=True)
 
 with right_col:
+    # Mobile-friendly view selector
+    if 'view_tab' not in st.session_state:
+        st.session_state.view_tab = "📰 Feed"
+    st.markdown("<div class='segmented'>", unsafe_allow_html=True)
+    view_choice = st.radio(
+        "View",
+        ["📰 Feed", "📆 Calendar", "🗺️ Map", "📊 Table"],
+        index=["📰 Feed", "📆 Calendar", "🗺️ Map", "📊 Table"].index(st.session_state.view_tab if st.session_state.view_tab in ["📰 Feed", "📆 Calendar", "🗺️ Map", "📊 Table"] else "📰 Feed"),
+        horizontal=True,
+    )
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.session_state.view_tab = view_choice
+
     # Display events for selected day or all month events
     if st.session_state.selected_day and st.session_state.selected_day in events_by_day:
         selected_events = events_by_day[st.session_state.selected_day]
         day_date = datetime(selected_year, selected_month, st.session_state.selected_day)
-        st.subheader(f"📌 Events on {day_date.strftime('%A, %B %d, %Y')}")
+        page_title = f"📌 Events on {day_date.strftime('%A, %B %d, %Y')}"
     else:
         selected_events = month_events
-        st.subheader(f"📅 All Events in {datetime(selected_year, selected_month, 1).strftime('%B %Y')}")
-
-    # Stories-style quick day selector removed per request
+        page_title = f"📅 All Events in {datetime(selected_year, selected_month, 1).strftime('%B %Y')}"
 
     if selected_events:
+        st.subheader(page_title)
         # Sort by price: cheapest first; unknown price last
         def _price_key(e):
             pm = getattr(e, 'price_min', None)
             return pm if pm is not None else float('inf')
         sorted_events = sorted(selected_events, key=_price_key)
-        tab1, tab2, tab3 = st.tabs(["📰 Feed", "🗺️ Map", "📊 Table"])
-        with tab1:
-                        for evt in sorted_events:
-                                img_html = f"<img class='post-img' src='{evt.image_url}' alt='event image'/>" if getattr(evt, 'image_url', '') else "<div class='post-img'></div>"
-                                cur = getattr(evt, 'currency', '')
-                                sym = '$' if cur == 'USD' else ''
-                                price_label = ''
-                                pm = getattr(evt, 'price_min', None)
-                                px = getattr(evt, 'price_max', None)
-                                if pm is not None and px is not None and px != pm:
-                                        price_label = f"{sym}{pm:.0f}-{sym}{px:.0f}"
-                                elif pm is not None:
-                                        price_label = f"{sym}{pm:.0f}"
-                                price_html = f"<span class='pill'>💲 {price_label}</span>" if price_label else ""
-                                card_html = textwrap.dedent(f"""
-                                <div class="post">
-                                {img_html}
-                                <div class="post-body">
-                                <div class="post-title">{evt.title}</div>
-                                <div style="margin-top:6px;">
-                                <span class="pill">{evt.date.strftime('%b %d')}</span>
-                                <span class="pill">{evt.date.strftime('%I:%M %p')}</span>
-                                <span class="pill">{evt.location}</span>
-                                {price_html}
-                                </div>
-                                </div>
-                                <div class="post-actions">
-                                <a class="link" href="https://www.google.com/search?q={quote_plus(' '.join([evt.title, evt.date.strftime('%b %d, %Y'), evt.location]).strip())}" target="_blank">View details</a>
-                                </div>
-                                </div>
-                                """)
-                                st.markdown(card_html, unsafe_allow_html=True)
-        with tab2:
+
+        if st.session_state.view_tab == "📰 Feed":
+            for evt in sorted_events:
+                img_html = f"<img class='post-img' src='{evt.image_url}' alt='event image'/>" if getattr(evt, 'image_url', '') else "<div class='post-img'></div>"
+                cur = getattr(evt, 'currency', '')
+                sym = '$' if cur == 'USD' else ''
+                price_label = ''
+                pm = getattr(evt, 'price_min', None)
+                px = getattr(evt, 'price_max', None)
+                if pm is not None and px is not None and px != pm:
+                    price_label = f"{sym}{pm:.0f}-{sym}{px:.0f}"
+                elif pm is not None:
+                    price_label = f"{sym}{pm:.0f}"
+                price_html = f"<span class='pill'>💲 {price_label}</span>" if price_label else ""
+                card_html = textwrap.dedent(f"""
+                <div class="post">
+                {img_html}
+                <div class="post-body">
+                <div class="post-title">{evt.title}</div>
+                <div style="margin-top:6px;">
+                <span class="pill">{evt.date.strftime('%b %d')}</span>
+                <span class="pill">{evt.date.strftime('%I:%M %p')}</span>
+                <span class="pill">{evt.location}</span>
+                {price_html}
+                </div>
+                </div>
+                <div class="post-actions">
+                <a class="link" href="https://www.google.com/search?q={quote_plus(' '.join([evt.title, evt.date.strftime('%b %d, %Y'), evt.location]).strip())}" target="_blank">View details</a>
+                </div>
+                </div>
+                """)
+                st.markdown(card_html, unsafe_allow_html=True)
+
+        elif st.session_state.view_tab == "🗺️ Map":
             m = folium.Map(location=[42.4825, -70.8800], zoom_start=13, tiles='OpenStreetMap')
             for evt in sorted_events:
                 folium.Marker(
@@ -306,8 +325,9 @@ with right_col:
                     tooltip=evt.title,
                     icon=folium.Icon(color='red', icon='calendar')
                 ).add_to(m)
-            st_folium(m, use_container_width=True, height=480)
-        with tab3:
+            st_folium(m, use_container_width=True, height=420)
+
+        elif st.session_state.view_tab == "📊 Table":
             df_data = []
             for evt in sorted_events:
                 cur = getattr(evt, 'currency', '')
@@ -330,6 +350,9 @@ with right_col:
                 })
             df = pd.DataFrame(df_data)
             st.dataframe(df, use_container_width=True, hide_index=True)
+
+        elif st.session_state.view_tab == "📆 Calendar":
+            st.info("Select a day from the calendar above to see events.")
     else:
         st.info("No events scheduled for this selection.")
 
