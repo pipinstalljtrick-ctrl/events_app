@@ -74,15 +74,9 @@ st.markdown("""
     h2, h3 { margin: 0.25rem 0; }
 
     /* Segmented control styles */
-    .segmented .stRadio [role="radiogroup"],
-    .bottom-nav .stRadio [role="radiogroup"] { display:flex; gap:8px; flex-wrap:nowrap; align-items:center; }
-    .segmented .stRadio [role="radio"],
-    .bottom-nav .stRadio [role="radio"] { padding:10px 12px; border-radius:999px; border:1px solid #eee; background:#fff; color:#333; }
-    .segmented .stRadio [aria-checked="true"],
-    .bottom-nav .stRadio [aria-checked="true"] { background: #ffe6ee; border-color: #ffccd9; color: #d62a62; }
-
-    /* Bottom nav (mobile only) */
-    .bottom-nav { display:none; }
+    .segmented .stRadio [role="radiogroup"] { display:flex; gap:8px; flex-wrap:nowrap; align-items:center; }
+    .segmented .stRadio [role="radio"] { padding:10px 12px; border-radius:999px; border:1px solid #eee; background:#fff; color:#333; }
+    .segmented .stRadio [aria-checked="true"] { background: #ffe6ee; border-color: #ffccd9; color: #d62a62; }
 
     /* Calendar buttons: scoped compact style */
     .calendar .stButton>button {
@@ -112,9 +106,8 @@ st.markdown("""
             .stTabs [role="tablist"] { overflow-x: auto; white-space: nowrap; }
             /* Stack ONLY the top-level two-column layout on mobile */
             .two-col-root + div > [data-testid="column"] { width: 100% !important; flex: 1 1 100% !important; display: block !important; margin-bottom: 8px; }
-            /* Bottom nav visible on mobile, with safe-area padding */
-            .bottom-nav { display:block; position:fixed; left:0; right:0; bottom:0; background: var(--bg); border-top:1px solid #eee; z-index:1000; padding: calc(10px + env(safe-area-inset-bottom)); }
-            .block-container { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+            /* Bottom padding retained for general spacing on mobile */
+            .block-container { padding-bottom: 84px; }
         }
 </style>
 """, unsafe_allow_html=True)
@@ -368,19 +361,7 @@ with right_col:
     else:
         st.info("No events scheduled for this selection.")
 
-# Fixed bottom nav for mobile: keeps view selection accessible
-st.markdown("<div class='bottom-nav'>", unsafe_allow_html=True)
-bn_choice = st.radio(
-    "",
-    ["📰 Feed", "🗺️ Map", "📊 Table"],
-    index=["📰 Feed", "🗺️ Map", "📊 Table"].index(st.session_state.view_tab if st.session_state.view_tab in ["📰 Feed", "🗺️ Map", "📊 Table"] else "📰 Feed"),
-    horizontal=True,
-    label_visibility="collapsed",
-    key="bottom_nav",
-)
-st.markdown("</div>", unsafe_allow_html=True)
-if bn_choice != st.session_state.view_tab:
-    st.session_state.view_tab = bn_choice
+# Bottom nav removed per request; single top segmented control remains.
 
 st.divider()
 
