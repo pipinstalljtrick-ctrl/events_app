@@ -246,14 +246,15 @@ with left_col:
     st.markdown("</div>", unsafe_allow_html=True)
 
 with right_col:
-    # Mobile-friendly view selector
-    if 'view_tab' not in st.session_state:
+    # Mobile-friendly view selector (Calendar tab removed)
+    allowed_tabs = ["📰 Feed", "🗺️ Map", "📊 Table"]
+    if 'view_tab' not in st.session_state or st.session_state.view_tab not in allowed_tabs:
         st.session_state.view_tab = "📰 Feed"
     st.markdown("<div class='segmented'>", unsafe_allow_html=True)
     view_choice = st.radio(
         "View",
-        ["📰 Feed", "📆 Calendar", "🗺️ Map", "📊 Table"],
-        index=["📰 Feed", "📆 Calendar", "🗺️ Map", "📊 Table"].index(st.session_state.view_tab if st.session_state.view_tab in ["📰 Feed", "📆 Calendar", "🗺️ Map", "📊 Table"] else "📰 Feed"),
+        allowed_tabs,
+        index=allowed_tabs.index(st.session_state.view_tab),
         horizontal=True,
     )
     st.markdown("</div>", unsafe_allow_html=True)
@@ -351,8 +352,7 @@ with right_col:
             df = pd.DataFrame(df_data)
             st.dataframe(df, use_container_width=True, hide_index=True)
 
-        elif st.session_state.view_tab == "📆 Calendar":
-            st.info("Select a day from the calendar above to see events.")
+        # Calendar view removed from segmented control; calendar remains on the left.
     else:
         st.info("No events scheduled for this selection.")
 
