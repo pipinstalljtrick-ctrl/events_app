@@ -199,41 +199,28 @@ cal = cal_module.monthcalendar(selected_year, selected_month)
 if 'selected_day' not in st.session_state:
     st.session_state.selected_day = None
 
-left_col, right_col = st.columns([1, 2])
+# Date dropdown instead of calendar grid
+available_days = sorted(events_by_day.keys())
+selected_choice = st.selectbox(
+    "Select date",
+    [None] + available_days,
+    format_func=lambda d: (
+        "All Month" if d is None else f"{datetime(selected_year, selected_month, d).strftime('%a, %b %d')} ({len(events_by_day[d])})"
+    ),
+    index=0,
+)
+st.session_state.selected_day = selected_choice
 
-with left_col:
-    # Weekday labels
-    col_labels = st.columns(7)
-    for i, label in enumerate(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']):
-        with col_labels[i]:
-            st.markdown(f"**{label}**")
-    # Calendar grid
-    for week in cal:
-        cols = st.columns(7)
-        for day_idx, day in enumerate(week):
-            with cols[day_idx]:
-                if day == 0:
-                    st.markdown("")
-                else:
-                    has_events = day in events_by_day
-                    event_count = len(events_by_day.get(day, []))
-                    if has_events:
-                        if st.button(f"📌 {day} ({event_count})", key=f"day_{day}", use_container_width=True):
-                            st.session_state.selected_day = day
-                    else:
-                        st.button(f"{day}", key=f"day_{day}", use_container_width=True, disabled=True)
+# Display events for selected day or all month events
+if st.session_state.selected_day and st.session_state.selected_day in events_by_day:
+    selected_events = events_by_day[st.session_state.selected_day]
+    day_date = datetime(selected_year, selected_month, st.session_state.selected_day)
+    st.subheader(f"📌 Events on {day_date.strftime('%A, %B %d, %Y')}")
+else:
+    selected_events = month_events
+    st.subheader(f"📅 All Events in {datetime(selected_year, selected_month, 1).strftime('%B %Y')}")
 
-with right_col:
-    # Display events for selected day or all month events
-    if st.session_state.selected_day and st.session_state.selected_day in events_by_day:
-        selected_events = events_by_day[st.session_state.selected_day]
-        day_date = datetime(selected_year, selected_month, st.session_state.selected_day)
-        st.subheader(f"📌 Events on {day_date.strftime('%A, %B %d, %Y')}")
-    else:
-        selected_events = month_events
-        st.subheader(f"📅 All Events in {datetime(selected_year, selected_month, 1).strftime('%B %Y')}")
-
-    # Stories-style quick day selector removed per request
+# Stories-style quick day selector removed per request
 
     if selected_events:
         # Sort by price: cheapest first; unknown price last
