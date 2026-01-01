@@ -72,9 +72,6 @@ st.markdown("""
     .stTabs { margin-top: 0.25rem; }
     h2, h3 { margin: 0.25rem 0; }
 
-    /* Make Streamlit horizontal blocks wrap responsively */
-    [data-testid="stHorizontalBlock"] { display:flex; flex-wrap: wrap !important; gap: 12px; }
-    [data-testid="column"] { width: auto !important; flex: 1 1 320px !important; min-width: 280px; }
     /* Tabs wrap when cramped */
     .stTabs [role="tablist"] { display:flex; flex-wrap: wrap; gap:8px; }
     .stTabs [role="tab"] { flex: 1 1 140px; }
