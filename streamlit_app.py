@@ -14,7 +14,7 @@ import textwrap
 import calendar as cal_module
 from urllib.parse import quote_plus
 
-from events_service import aggregate_events, Event, get_eventbrite_debug
+from events_service import aggregate_events, Event
 from dotenv import load_dotenv
 import os
 
@@ -181,12 +181,6 @@ selected_month = st.session_state.view_month.month
 month_label = datetime(selected_year, selected_month, 1).strftime('%B %Y')
 with nav_center:
     st.subheader(f"📆 {month_label}")
-    tm_count = sum(1 for e in events if getattr(e, 'source', '') == 'Ticketmaster')
-    eb_count = sum(1 for e in events if getattr(e, 'source', '') == 'Eventbrite')
-    st.caption(f"Loaded {len(events)} events • Ticketmaster: {tm_count} • Eventbrite: {eb_count}")
-    eb_debug = get_eventbrite_debug()
-    if eb_debug:
-        st.caption(f"Eventbrite status: {eb_debug.get('status','')} • pages: {eb_debug.get('page_count',0)}")
 
 month_events = [e for e in events if e.date.year == selected_year and e.date.month == selected_month]
 
@@ -313,4 +307,5 @@ else:
 st.divider()
 
 # Footer
-st.caption(f"🔄 Updated: {datetime.now().strftime('%I:%M %p on %B %d, %Y')} | Source: Ticketmaster + Eventbrite")
+sources = ", ".join(sorted({e.source for e in events})) or "Unknown"
+st.caption(f"🔄 Updated: {datetime.now().strftime('%I:%M %p on %B %d, %Y')} | Sources: {sources}")

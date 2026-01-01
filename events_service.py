@@ -343,11 +343,11 @@ def aggregate_events(zip_code: str, radius_miles: float, start_date: datetime, e
     eb = fetch_eventbrite_events(lat, lon, radius_miles, start_date, end_date, None)
     all_events: List[Event] = tm + eb
 
-    # Deduplicate by title + day
+    # Deduplicate by title + day + source (avoid cross-source drops)
     seen = set()
     uniq: List[Event] = []
     for e in all_events:
-        key = (e.title.strip().lower()[:40], e.date.date())
+        key = (e.title.strip().lower()[:60], e.date.date(), e.source)
         if key in seen:
             continue
         seen.add(key)
