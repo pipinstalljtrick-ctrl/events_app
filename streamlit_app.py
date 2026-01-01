@@ -181,6 +181,9 @@ selected_month = st.session_state.view_month.month
 month_label = datetime(selected_year, selected_month, 1).strftime('%B %Y')
 with nav_center:
     st.subheader(f"📆 {month_label}")
+    tm_count = sum(1 for e in events if getattr(e, 'source', '') == 'Ticketmaster')
+    eb_count = sum(1 for e in events if getattr(e, 'source', '') == 'Eventbrite')
+    st.caption(f"Loaded {len(events)} events • Ticketmaster: {tm_count} • Eventbrite: {eb_count}")
 
 month_events = [e for e in events if e.date.year == selected_year and e.date.month == selected_month]
 
