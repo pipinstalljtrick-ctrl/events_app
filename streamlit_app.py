@@ -307,4 +307,4 @@ else:
 st.divider()
 
 # Footer
-st.caption(f"🔄 Updated: {datetime.now().strftime('%I:%M %p on %B %d, %Y')} | Source: Ticketmaster")
+st.caption(f"🔄 Updated: {datetime.now().strftime('%I:%M %p on %B %d, %Y')} | Source: Ticketmaster + Eventbrite")
