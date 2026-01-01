@@ -73,8 +73,6 @@ st.markdown("""
 
         /* iPhone/iOS mobile optimizations */
         @media (max-width: 480px) {
-            /* Stack Streamlit columns */
-            [data-testid="column"] { width: 100% !important; flex: 1 1 100% !important; display: block !important; }
             /* Non-sticky nav on mobile */
             .ig-nav { position: static; padding: 6px 8px; }
             /* Larger touch targets */
