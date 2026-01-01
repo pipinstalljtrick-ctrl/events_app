@@ -180,8 +180,6 @@ with nav_center:
 
 month_events = [e for e in events if e.date.year == selected_year and e.date.month == selected_month]
 
-hide_calendar = st.checkbox("Hide calendar (mobile)", value=True, help="Show only the event list on small screens.")
-
 # Group events by day
 events_by_day = {}
 for evt in month_events:
@@ -197,44 +195,39 @@ cal = cal_module.monthcalendar(selected_year, selected_month)
 if 'selected_day' not in st.session_state:
     st.session_state.selected_day = None
 
-if hide_calendar:
-    # Calendar hidden: show all month events
-    selected_events = month_events
-    st.subheader(f"📅 All Events in {datetime(selected_year, selected_month, 1).strftime('%B %Y')}")
-else:
-    # Two-column layout with calendar
-    left_col, right_col = st.columns([1, 2])
-    with left_col:
-        # Weekday labels
-        col_labels = st.columns(7)
-        for i, label in enumerate(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']):
-            with col_labels[i]:
-                st.markdown(f"**{label}**")
-        # Calendar grid
-        for week in cal:
-            cols = st.columns(7)
-            for day_idx, day in enumerate(week):
-                with cols[day_idx]:
-                    if day == 0:
-                        st.markdown("")
-                    else:
-                        has_events = day in events_by_day
-                        event_count = len(events_by_day.get(day, []))
-                        if has_events:
-                            if st.button(f"📌 {day} ({event_count})", key=f"day_{day}", use_container_width=True):
-                                st.session_state.selected_day = day
-                        else:
-                            st.button(f"{day}", key=f"day_{day}", use_container_width=True, disabled=True)
+left_col, right_col = st.columns([1, 2])
 
-    with right_col:
-        # Display events for selected day or all month events
-        if st.session_state.selected_day and st.session_state.selected_day in events_by_day:
-            selected_events = events_by_day[st.session_state.selected_day]
-            day_date = datetime(selected_year, selected_month, st.session_state.selected_day)
-            st.subheader(f"📌 Events on {day_date.strftime('%A, %B %d, %Y')}")
-        else:
-            selected_events = month_events
-            st.subheader(f"📅 All Events in {datetime(selected_year, selected_month, 1).strftime('%B %Y')}")
+with left_col:
+    # Weekday labels
+    col_labels = st.columns(7)
+    for i, label in enumerate(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']):
+        with col_labels[i]:
+            st.markdown(f"**{label}**")
+    # Calendar grid
+    for week in cal:
+        cols = st.columns(7)
+        for day_idx, day in enumerate(week):
+            with cols[day_idx]:
+                if day == 0:
+                    st.markdown("")
+                else:
+                    has_events = day in events_by_day
+                    event_count = len(events_by_day.get(day, []))
+                    if has_events:
+                        if st.button(f"📌 {day} ({event_count})", key=f"day_{day}", use_container_width=True):
+                            st.session_state.selected_day = day
+                    else:
+                        st.button(f"{day}", key=f"day_{day}", use_container_width=True, disabled=True)
+
+with right_col:
+    # Display events for selected day or all month events
+    if st.session_state.selected_day and st.session_state.selected_day in events_by_day:
+        selected_events = events_by_day[st.session_state.selected_day]
+        day_date = datetime(selected_year, selected_month, st.session_state.selected_day)
+        st.subheader(f"📌 Events on {day_date.strftime('%A, %B %d, %Y')}")
+    else:
+        selected_events = month_events
+        st.subheader(f"📅 All Events in {datetime(selected_year, selected_month, 1).strftime('%B %Y')}")
 
     # Stories-style quick day selector removed per request
 
