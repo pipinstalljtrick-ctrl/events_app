@@ -40,8 +40,8 @@ st.markdown("""
     .block-container { padding-top: 0.25rem; }
     h1, h2, h3, p { color: var(--text); }
 
-    /* Top nav like Instagram */
-    .ig-nav { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; position:sticky; top:0; background: var(--bg); border-bottom: 1px solid #eee; z-index: 999; }
+    /* Top nav hidden to remove cut-off banner */
+    .ig-nav { display:none; }
     .ig-brand { font-weight: 800; letter-spacing: 0.8px; font-size: 20px; display:flex; align-items:center; gap:10px; }
     .ig-actions { display:flex; gap:10px; }
     .cigarette { width: 42px; height: 20px; }
