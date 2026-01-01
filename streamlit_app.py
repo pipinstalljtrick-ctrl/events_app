@@ -222,87 +222,87 @@ else:
 
 # Stories-style quick day selector removed per request
 
-    if selected_events:
-        # Sort by price: cheapest first; unknown price last
-        def _price_key(e):
-            pm = getattr(e, 'price_min', None)
-            return pm if pm is not None else float('inf')
-        sorted_events = sorted(selected_events, key=_price_key)
-        tab1, tab2, tab3 = st.tabs(["📰 Feed", "🗺️ Map", "📊 Table"])
-        with tab1:
-                        for evt in sorted_events:
-                                img_html = f"<img class='post-img' src='{evt.image_url}' alt='event image'/>" if getattr(evt, 'image_url', '') else "<div class='post-img'></div>"
-                                cur = getattr(evt, 'currency', '')
-                                sym = '$' if cur == 'USD' else ''
-                                price_label = ''
-                                pm = getattr(evt, 'price_min', None)
-                                px = getattr(evt, 'price_max', None)
-                                if pm is not None and px is not None and px != pm:
-                                        price_label = f"{sym}{pm:.0f}-{sym}{px:.0f}"
-                                elif pm is not None:
-                                        price_label = f"{sym}{pm:.0f}"
-                                price_html = f"<span class='pill'>💲 {price_label}</span>" if price_label else ""
-                                card_html = textwrap.dedent(f"""
-                                <div class="post">
-                                {img_html}
-                                <div class="post-body">
-                                <div class="post-title">{evt.title}</div>
-                                <div style="margin-top:6px;">
-                                <span class="pill">{evt.date.strftime('%b %d')}</span>
-                                <span class="pill">{evt.date.strftime('%I:%M %p')}</span>
-                                <span class="pill">{evt.location}</span>
-                                {price_html}
-                                </div>
-                                </div>
-                                <div class="post-actions">
-                                <a class="link" href="https://www.google.com/search?q={quote_plus(' '.join([evt.title, evt.date.strftime('%b %d, %Y'), evt.location]).strip())}" target="_blank">View details</a>
-                                </div>
-                                </div>
-                                """)
-                                st.markdown(card_html, unsafe_allow_html=True)
-        with tab2:
-            m = folium.Map(location=[42.4825, -70.8800], zoom_start=13, tiles='OpenStreetMap')
-            for evt in sorted_events:
-                folium.Marker(
-                    location=[evt.latitude, evt.longitude],
-                    popup=folium.Popup(
-                        f"""
-                        <b>{evt.title}</b><br>
-                        {evt.date.strftime('%b %d, %Y %I:%M %p')}<br>
-                        {evt.location}<br>
-                        <a href='https://www.google.com/search?q={quote_plus(' '.join([evt.title, evt.date.strftime('%b %d, %Y'), evt.location]).strip())}' target='_blank'>Search Event</a>
-                        """,
-                        max_width=250
-                    ),
-                    tooltip=evt.title,
-                    icon=folium.Icon(color='red', icon='calendar')
-                ).add_to(m)
-            st_folium(m, use_container_width=True, height=480)
-        with tab3:
-            df_data = []
-            for evt in sorted_events:
-                cur = getattr(evt, 'currency', '')
-                sym = '$' if cur == 'USD' else ''
-                pm = getattr(evt, 'price_min', None)
-                px = getattr(evt, 'price_max', None)
-                if pm is not None and px is not None and px != pm:
-                    price_text = f"{sym}{pm:.0f}-{sym}{px:.0f}"
-                elif pm is not None:
-                    price_text = f"{sym}{pm:.0f}"
-                else:
-                    price_text = ""
-                df_data.append({
-                    'Event': evt.title,
-                    'Date': evt.date.strftime('%m/%d/%Y'),
-                    'Time': evt.date.strftime('%I:%M %p'),
-                    'Location': evt.location,
-                    'Price': price_text,
-                    'Link': f"[Search](https://www.google.com/search?q={quote_plus(' '.join([evt.title, evt.date.strftime('%b %d, %Y'), evt.location]).strip())})"
-                })
-            df = pd.DataFrame(df_data)
-            st.dataframe(df, use_container_width=True, hide_index=True)
-    else:
-        st.info("No events scheduled for this selection.")
+if selected_events:
+    # Sort by price: cheapest first; unknown price last
+    def _price_key(e):
+        pm = getattr(e, 'price_min', None)
+        return pm if pm is not None else float('inf')
+    sorted_events = sorted(selected_events, key=_price_key)
+    tab1, tab2, tab3 = st.tabs(["📰 Feed", "🗺️ Map", "📊 Table"])
+    with tab1:
+        for evt in sorted_events:
+            img_html = f"<img class='post-img' src='{evt.image_url}' alt='event image'/>" if getattr(evt, 'image_url', '') else "<div class='post-img'></div>"
+            cur = getattr(evt, 'currency', '')
+            sym = '$' if cur == 'USD' else ''
+            price_label = ''
+            pm = getattr(evt, 'price_min', None)
+            px = getattr(evt, 'price_max', None)
+            if pm is not None and px is not None and px != pm:
+                price_label = f"{sym}{pm:.0f}-{sym}{px:.0f}"
+            elif pm is not None:
+                price_label = f"{sym}{pm:.0f}"
+            price_html = f"<span class='pill'>💲 {price_label}</span>" if price_label else ""
+            card_html = textwrap.dedent(f"""
+            <div class="post">
+            {img_html}
+            <div class="post-body">
+            <div class="post-title">{evt.title}</div>
+            <div style="margin-top:6px;">
+            <span class="pill">{evt.date.strftime('%b %d')}</span>
+            <span class="pill">{evt.date.strftime('%I:%M %p')}</span>
+            <span class="pill">{evt.location}</span>
+            {price_html}
+            </div>
+            </div>
+            <div class="post-actions">
+            <a class="link" href="https://www.google.com/search?q={quote_plus(' '.join([evt.title, evt.date.strftime('%b %d, %Y'), evt.location]).strip())}" target="_blank">View details</a>
+            </div>
+            </div>
+            """)
+            st.markdown(card_html, unsafe_allow_html=True)
+    with tab2:
+        m = folium.Map(location=[42.4825, -70.8800], zoom_start=13, tiles='OpenStreetMap')
+        for evt in sorted_events:
+            folium.Marker(
+                location=[evt.latitude, evt.longitude],
+                popup=folium.Popup(
+                    f"""
+                    <b>{evt.title}</b><br>
+                    {evt.date.strftime('%b %d, %Y %I:%M %p')}<br>
+                    {evt.location}<br>
+                    <a href='https://www.google.com/search?q={quote_plus(' '.join([evt.title, evt.date.strftime('%b %d, %Y'), evt.location]).strip())}' target='_blank'>Search Event</a>
+                    """,
+                    max_width=250
+                ),
+                tooltip=evt.title,
+                icon=folium.Icon(color='red', icon='calendar')
+            ).add_to(m)
+        st_folium(m, use_container_width=True, height=480)
+    with tab3:
+        df_data = []
+        for evt in sorted_events:
+            cur = getattr(evt, 'currency', '')
+            sym = '$' if cur == 'USD' else ''
+            pm = getattr(evt, 'price_min', None)
+            px = getattr(evt, 'price_max', None)
+            if pm is not None and px is not None and px != pm:
+                price_text = f"{sym}{pm:.0f}-{sym}{px:.0f}"
+            elif pm is not None:
+                price_text = f"{sym}{pm:.0f}"
+            else:
+                price_text = ""
+            df_data.append({
+                'Event': evt.title,
+                'Date': evt.date.strftime('%m/%d/%Y'),
+                'Time': evt.date.strftime('%I:%M %p'),
+                'Location': evt.location,
+                'Price': price_text,
+                'Link': f"[Search](https://www.google.com/search?q={quote_plus(' '.join([evt.title, evt.date.strftime('%b %d, %Y'), evt.location]).strip())})"
+            })
+        df = pd.DataFrame(df_data)
+        st.dataframe(df, use_container_width=True, hide_index=True)
+else:
+    st.info("No events scheduled for this selection.")
 
 st.divider()
 
