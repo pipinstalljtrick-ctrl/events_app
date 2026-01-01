@@ -3,7 +3,6 @@ import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Optional, Tuple
-import os
 
 import requests
 from geopy.geocoders import Nominatim
@@ -11,10 +10,9 @@ import geopy.distance
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
-# Backend default for Ticketmaster API key (used if none is provided)
+# Backend defaults for API keys (used if none are provided)
 DEFAULT_TM_API_KEY = "VHANTNxOcGFfpUD3k3whDbU1TiqBfbGs"
-DEFAULT_EB_TOKEN = "ZUT6K5LOUUFZOFBRYXBY"
-EB_DEBUG: Dict[str, object] = {"status": "", "page_count": 0, "params": {}}
+DEFAULT_EB_API_KEY = "272DADRV35ZXG3IS55"
 
 @dataclass
 class Event:
@@ -73,11 +71,9 @@ def _to_tm_iso(dt: datetime) -> str:
         dt = dt.astimezone()  # make aware in local timezone
     return dt.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
-def _to_utc_iso(dt: datetime) -> str:
-    """Generic ISO8601 UTC with trailing 'Z' for Eventbrite."""
-    if dt.tzinfo is None:
-        dt = dt.astimezone()
-    return dt.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+def _to_eb_iso(dt: datetime) -> str:
+    """Eventbrite expects ISO8601 UTC with 'Z'."""
+    return _to_tm_iso(dt)
 
 
 def fetch_ticketmaster_events(lat: float, lon: float, radius_miles: float, start_date: datetime, end_date: datetime, api_key: Optional[str]) -> List[Event]:
@@ -228,116 +224,113 @@ def fetch_ticketmaster_events(lat: float, lon: float, radius_miles: float, start
         return []
 
 
-def fetch_eventbrite_events(zip_code: str, lat: float, lon: float, radius_miles: float, start_date: datetime, end_date: datetime, eb_token: Optional[str]) -> List[Event]:
-    """Fetch Eventbrite events within radius and date range, expanded with venue.
+def fetch_eventbrite_events(lat: float, lon: float, radius_miles: float, start_date: datetime, end_date: datetime, api_key: Optional[str]) -> List[Event]:
+    """Fetch events from Eventbrite API within a lat/lon + radius and date range.
 
-    Authentication: Bearer token (private token).
-    Pagination: page_count pages; fetch concurrently.
+    - Uses events search with venue/logo expansion
+    - Attempts to fetch ticket classes to derive price ranges when available
     """
-    token = eb_token or os.getenv("EVENTBRITE_TOKEN") or DEFAULT_EB_TOKEN
+    token = api_key or DEFAULT_EB_API_KEY
     try:
-        url = "https://www.eventbriteapi.com/v3/events/search/"
-        out: List[Event] = []
+        base = "https://www.eventbriteapi.com/v3"
+        search_url = f"{base}/events/search/"
         headers = {"Authorization": f"Bearer {token}", "User-Agent": USER_AGENT}
+        out: List[Event] = []
+        page = 1
+        page_count = 1
         params_base = {
-            "location.address": zip_code,
-            "location.latitude": f"{lat}",
-            "location.longitude": f"{lon}",
-            "location.within": f"{int(round(radius_miles))}mi",
-            "start_date.range_start": _to_utc_iso(start_date),
-            "start_date.range_end": _to_utc_iso(end_date + timedelta(days=1)),
-            "expand": "venue",
-            "page": 1,
-            "page_size": 200,
+            "location.latitude": lat,
+            "location.longitude": lon,
+            "location.within": f"{max(1, int(round(radius_miles)))}mi",
+            "expand": "venue,logo",
             "sort_by": "date",
+            "start_date.range_start": _to_eb_iso(start_date),
+            "start_date.range_end": _to_eb_iso(end_date + timedelta(days=1)),
         }
-        r0 = requests.get(url, headers=headers, params=params_base, timeout=12)
-        if r0.status_code in (401, 403):
-            raise ValueError("Eventbrite API token is invalid or unauthorized.")
+        r0 = requests.get(search_url, headers=headers, params={**params_base, "page": page}, timeout=14)
+        if r0.status_code == 401:
+            raise ValueError("Eventbrite API key is invalid or unauthorized.")
         if r0.status_code != 200:
-            EB_DEBUG.update({"status": f"HTTP {r0.status_code}", "page_count": 0, "params": params_base})
             return []
         d0 = r0.json()
-        ev0 = d0.get("events", [])
-        pag = d0.get("pagination", {})
-        page_count = int(pag.get("page_count", 1) or 1)
-        EB_DEBUG.update({"status": "OK", "page_count": page_count, "params": params_base})
+        events0 = d0.get("events", [])
+        pagination = d0.get("pagination", {})
+        page_count = int(pagination.get("page_count", 1)) or 1
 
-        def _parse_event(ev: Dict) -> Optional[Event]:
+        def _price_for_event(evt_id: str) -> Tuple[Optional[float], Optional[float], str]:
             try:
-                name = (ev.get("name", {}) or {}).get("text") or "Eventbrite Event"
-                ds = ev.get("start", {}) or {}
-                dt_text = ds.get("utc") or ds.get("local")
-                if not dt_text:
-                    return None
-                try:
-                    dt = datetime.fromisoformat(dt_text.replace("Z", "+00:00"))
-                except Exception:
-                    return None
-                dt = _to_local_naive(dt)
-                venue = ev.get("venue") or {}
-                vlat = float(venue.get("latitude", lat)) if venue.get("latitude") else lat
-                vlon = float(venue.get("longitude", lon)) if venue.get("longitude") else lon
-                loc_name = venue.get("name") or (venue.get("address", {}) or {}).get("city") or ""
-                url_ev = ev.get("url") or ""
-                logo = ev.get("logo") or {}
-                img_url = logo.get("url") or ""
-                # Price info
-                is_free = bool(ev.get("is_free"))
-                currency = ev.get("currency") or ""
-                pmin = 0.0 if is_free else None
-                pmax = 0.0 if is_free else None
-                return Event(
-                    title=name,
-                    date=dt,
-                    location=loc_name,
-                    latitude=vlat,
-                    longitude=vlon,
-                    url=url_ev,
-                    source="Eventbrite",
-                    image_url=img_url,
-                    price_min=pmin,
-                    price_max=pmax,
-                    currency=currency,
-                )
-            except Exception:
-                return None
-
-        for ev in ev0:
-            e = _parse_event(ev)
-            if e:
-                out.append(e)
-
-        # Fetch remaining pages concurrently
-        if page_count > 1:
-            def fetch_page(p: int) -> List[Dict]:
-                rp = requests.get(url, headers=headers, params={**params_base, "page": p}, timeout=12)
-                if rp.status_code in (401, 403):
-                    raise ValueError("Eventbrite API token is invalid or unauthorized.")
-                if rp.status_code != 200:
-                    return []
-                return (rp.json() or {}).get("events", [])
-
-            max_workers = min(8, page_count)
-            with ThreadPoolExecutor(max_workers=max_workers) as ex:
-                futures = {ex.submit(fetch_page, p): p for p in range(2, page_count + 1)}
-                for fut in as_completed(futures):
-                    try:
-                        items = fut.result()
-                        for ev in items:
-                            e = _parse_event(ev)
-                            if e:
-                                out.append(e)
-                    except Exception:
+                tc_url = f"{base}/events/{evt_id}/ticket_classes/"
+                tr = requests.get(tc_url, headers=headers, timeout=10)
+                if tr.status_code != 200:
+                    return (None, None, "")
+                td = tr.json()
+                classes = td.get("ticket_classes", [])
+                prices: List[float] = []
+                currency = ""
+                for c in classes:
+                    # skip free/donation tickets
+                    if c.get("free") or c.get("donation"):
                         continue
+                    cost = c.get("cost") or {}
+                    mv = cost.get("major_value")
+                    if mv is not None:
+                        try:
+                            prices.append(float(mv))
+                            currency = cost.get("currency") or currency
+                        except Exception:
+                            pass
+                if prices:
+                    return (min(prices), max(prices), currency)
+                return (None, None, "")
+            except Exception:
+                return (None, None, "")
+
+        def _coerce_latlon(v: Dict) -> Tuple[float, float]:
+            try:
+                vlat = float(v.get("latitude", lat))
+                vlon = float(v.get("longitude", lon))
+                return vlat, vlon
+            except Exception:
+                return lat, lon
+
+        def _process_events(items: List[Dict]):
+            for ev in items:
+                try:
+                    name = (ev.get("name", {}) or {}).get("text") or "Eventbrite Event"
+                    ds = ev.get("start", {}) or {}
+                    dt_text = ds.get("utc") or ds.get("local")
+                    if not dt_text:
+                        continue
+                    try:
+                        dt = datetime.fromisoformat(dt_text.replace("Z", "+00:00"))
+                    except Exception:
+                        try:
+                            dt = datetime.strptime(dt_text[:10], "%Y-%m-%d")
+                        except Exception:
+                            continue
+                    dt = _to_local_naive(dt)
+                    venue = (ev.get("venue") or {})
+                    vlat, vlon = _coerce_latlon(venue)
+                    loc = venue.get("name") or (venue.get("address", {}) or {}).get("localized_address_display", "")
+                    url = (ev.get("url") or "").strip()
+                    logo = (ev.get("logo") or {})
+                    image_url = logo.get("url") or ""
+                    evt_id = (ev.get("id") or "").strip()
+                    pmin, pmax, curr = _price_for_event(evt_id) if evt_id else (None, None, "")
+                    out.append(Event(title=name, date=dt, location=loc, latitude=vlat, longitude=vlon, url=url, source="Eventbrite", image_url=image_url, price_min=pmin, price_max=pmax, currency=curr))
+                except Exception:
+                    continue
+
+        _process_events(events0)
+        for p in range(2, page_count + 1):
+            rp = requests.get(search_url, headers=headers, params={**params_base, "page": p}, timeout=14)
+            if rp.status_code != 200:
+                break
+            dp = rp.json()
+            _process_events(dp.get("events", []))
         return out
     except Exception:
-        EB_DEBUG.update({"status": "ERROR", "page_count": 0, "params": params_base if 'params_base' in locals() else {}})
         return []
-
-
-def get_eventbrite_debug() -> Dict[str, object]:
-    return EB_DEBUG
 
 
 def aggregate_events(zip_code: str, radius_miles: float, start_date: datetime, end_date: datetime, tm_key: Optional[str]) -> List[Event]:
@@ -345,9 +338,9 @@ def aggregate_events(zip_code: str, radius_miles: float, start_date: datetime, e
     if not coords:
         return []
     lat, lon = coords
-    # Ticketmaster + Eventbrite
+    # Ticketmaster and Eventbrite
     tm = fetch_ticketmaster_events(lat, lon, radius_miles, start_date, end_date, tm_key)
-    eb = fetch_eventbrite_events(zip_code, lat, lon, radius_miles, start_date, end_date, None)
+    eb = fetch_eventbrite_events(lat, lon, radius_miles, start_date, end_date, None)
     all_events: List[Event] = tm + eb
 
     # Deduplicate by title + day
