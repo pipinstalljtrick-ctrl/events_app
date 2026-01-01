@@ -52,6 +52,31 @@ def geocode_zip(zip_code: str) -> Optional[Tuple[float, float]]:
     return None
 
 
+def zip_to_town(zip_code: str) -> str:
+    """Best-effort ZIP -> town/city name.
+
+    Uses Nominatim geocoding with address details. Returns an empty string if
+    lookup fails.
+    """
+    try:
+        geocoder = Nominatim(user_agent="events_app_zip")
+        loc = geocoder.geocode(
+            {"postalcode": zip_code, "country": "USA"},
+            addressdetails=True,
+            timeout=10,
+        )
+        if not loc:
+            return ""
+        addr = getattr(loc, "raw", {}).get("address", {}) if hasattr(loc, "raw") else {}
+        town = addr.get("city") or addr.get("town") or addr.get("village") or addr.get("hamlet") or ""
+        state = addr.get("state") or addr.get("state_code") or ""
+        if town and state:
+            return f"{town}, {state}"
+        return town or state or (getattr(loc, "address", "") or "")
+    except Exception:
+        return ""
+
+
 def _haversine_miles(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return geopy.distance.geodesic((lat1, lon1), (lat2, lon2)).miles
 

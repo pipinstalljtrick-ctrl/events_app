@@ -14,7 +14,7 @@ import textwrap
 import calendar as cal_module
 from urllib.parse import quote_plus
 
-from events_service import aggregate_events, Event
+from events_service import aggregate_events, Event, zip_to_town
 from dotenv import load_dotenv
 import os
 
@@ -131,6 +131,12 @@ st.markdown("""
 colA, colB = st.columns([2,1])
 with colA:
     zip_code = st.text_input("ZIP Code", value="01907")
+    @st.cache_data(ttl=86400)
+    def _zip_label(z: str) -> str:
+        return zip_to_town(z)
+    town_label = _zip_label(zip_code.strip()) if zip_code else ""
+    if town_label:
+        st.caption(f"📍 {town_label}")
 with colB:
     radius = st.slider("Radius (miles)", min_value=1, max_value=25, value=15)
 
