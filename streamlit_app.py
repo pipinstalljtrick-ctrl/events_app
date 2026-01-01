@@ -98,8 +98,8 @@ st.markdown("""
             .brand-title .cigarette { width: 52px; height: 20px; }
             /* Tabs scroll horizontally */
             .stTabs [role="tablist"] { overflow-x: auto; white-space: nowrap; }
-            /* Stack ONLY the main two-column layout on mobile */
-            .main-two-col + div [data-testid="column"] { width: 100% !important; flex: 1 1 100% !important; display: block !important; }
+            /* Stack ONLY the top-level two-column layout on mobile */
+            .two-col-root + div > [data-testid="column"] { width: 100% !important; flex: 1 1 100% !important; display: block !important; margin-bottom: 8px; }
         }
 </style>
 """, unsafe_allow_html=True)
@@ -138,7 +138,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Marker to target the next columns block for mobile stacking
-st.markdown("<div class='main-two-col'></div>", unsafe_allow_html=True)
+st.markdown("<div class='two-col-root'></div>", unsafe_allow_html=True)
 
 colA, colB = st.columns([2,1])
 with colA:
