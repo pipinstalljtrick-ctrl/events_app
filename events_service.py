@@ -226,7 +226,7 @@ def fetch_ticketmaster_events(lat: float, lon: float, radius_miles: float, start
         return []
 
 
-def fetch_eventbrite_events(lat: float, lon: float, radius_miles: float, start_date: datetime, end_date: datetime, eb_token: Optional[str]) -> List[Event]:
+def fetch_eventbrite_events(zip_code: str, lat: float, lon: float, radius_miles: float, start_date: datetime, end_date: datetime, eb_token: Optional[str]) -> List[Event]:
     """Fetch Eventbrite events within radius and date range, expanded with venue.
 
     Authentication: Bearer token (private token).
@@ -238,6 +238,7 @@ def fetch_eventbrite_events(lat: float, lon: float, radius_miles: float, start_d
         out: List[Event] = []
         headers = {"Authorization": f"Bearer {token}", "User-Agent": USER_AGENT}
         params_base = {
+            "location.address": zip_code,
             "location.latitude": f"{lat}",
             "location.longitude": f"{lon}",
             "location.within": f"{int(round(radius_miles))}mi",
@@ -245,6 +246,7 @@ def fetch_eventbrite_events(lat: float, lon: float, radius_miles: float, start_d
             "start_date.range_end": _to_utc_iso(end_date + timedelta(days=1)),
             "expand": "venue",
             "page": 1,
+            "page_size": 200,
             "sort_by": "date",
         }
         r0 = requests.get(url, headers=headers, params=params_base, timeout=12)
@@ -336,7 +338,7 @@ def aggregate_events(zip_code: str, radius_miles: float, start_date: datetime, e
     lat, lon = coords
     # Ticketmaster + Eventbrite
     tm = fetch_ticketmaster_events(lat, lon, radius_miles, start_date, end_date, tm_key)
-    eb = fetch_eventbrite_events(lat, lon, radius_miles, start_date, end_date, None)
+    eb = fetch_eventbrite_events(zip_code, lat, lon, radius_miles, start_date, end_date, None)
     all_events: List[Event] = tm + eb
 
     # Deduplicate by title + day
