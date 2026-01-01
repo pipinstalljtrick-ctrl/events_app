@@ -37,6 +37,7 @@ st.markdown("""
         --ring2: #fad0c4;
     }
     body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    .stApp { background: var(--bg) !important; }
     .block-container { padding-top: 0.25rem; }
     h1, h2, h3, p { color: var(--text); }
 
@@ -70,6 +71,18 @@ st.markdown("""
         .stButton>button { padding: 0.25rem 0.6rem; font-size: 0.9rem; }
     .stTabs { margin-top: 0.25rem; }
     h2, h3 { margin: 0.25rem 0; }
+
+    /* Calendar buttons: scoped compact style */
+    .calendar .stButton>button {
+        height: 36px;
+        padding: 4px 8px;
+        font-size: 14px;
+        border-radius: 10px;
+        background: #ffffff;
+        border: 1px solid #e5e5e5;
+        color: var(--text);
+    }
+    .calendar [data-testid="column"] { padding: 2px; }
 
         /* iPhone/iOS mobile optimizations */
         @media (max-width: 480px) {
@@ -203,6 +216,7 @@ if 'selected_day' not in st.session_state:
 left_col, right_col = st.columns([1, 2])
 
 with left_col:
+    st.markdown("<div class='calendar'>", unsafe_allow_html=True)
     # Weekday labels
     col_labels = st.columns(7)
     for i, label in enumerate(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']):
@@ -219,10 +233,11 @@ with left_col:
                     has_events = day in events_by_day
                     event_count = len(events_by_day.get(day, []))
                     if has_events:
-                        if st.button(f"📌 {day} ({event_count})", key=f"day_{day}", use_container_width=True):
+                        if st.button(f"{day}", key=f"day_{day}", use_container_width=True, help=f"{event_count} events"):
                             st.session_state.selected_day = day
                     else:
                         st.button(f"{day}", key=f"day_{day}", use_container_width=True, disabled=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 with right_col:
     # Display events for selected day or all month events
